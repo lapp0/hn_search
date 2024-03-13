@@ -72,18 +72,48 @@ async def get_best_submissions(desc, n=500):
 
 @app.route('/', methods=['GET'])
 async def index():
-    # Serving a simple form
+    # Serving a simple form with JavaScript to handle form submission and display results
     return '''
     <html>
     <body>
-        <form action="/search" method="get">
+        <form id="searchForm">
             <label for="desc">HN profile description:</label><br>
             <textarea id="desc" name="desc" rows="4" cols="50"></textarea><br>
-            <input type="submit" value="Search">
+            <input type="button" value="Search" onclick="search()">
         </form>
+        <div id="results"></div>
+        <script>
+            function search() {
+                const desc = document.getElementById('desc').value;
+                fetch('/best_submissions/?desc=' + encodeURIComponent(desc))
+                .then(response => response.json())
+                .then(data => {
+                    const submissionsHTML = data.map(([id, {score, title, title_score, comments}]) => {
+                        const sortedComments = Object.entries(comments).sort(([,a], [,b]) => b.comment_score - a.comment_score).slice(0, 3);
+                        return `
+                            <li>
+                                <a href="https://news.ycombinator.com/item?id=${id}">${title}</a><br>
+                                <small><i>(Overall Score: ${score.toFixed(2)})</i></small>
+                                <small><i>(Title Score: ${title_score.toFixed(2)})</i></small><br>
+                                <ul>
+                                ${sortedComments.map(([comment_id, {comment_score, comment_text}]) => `
+                                    <li>
+                                    <a href="https://news.ycombinator.com/item?id=${comment_id}">${comment_text}</a>
+                                    <small><i>(Comment Score: ${comment_score.toFixed(2)})</i></small>
+                                    </li>
+                                `).join('')}
+                                </ul>
+                            </li>
+                        `;
+                    }).join('<hr/>');
+                    document.getElementById('results').innerHTML = `<ul>${submissionsHTML}</ul>`;
+                });
+            }
+        </script>
     </body>
     </html>
     '''
+
 
 @app.route('/search/')
 async def search_results():
