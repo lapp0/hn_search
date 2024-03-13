@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify, redirect, url_for
 app = Flask(__name__)
 
 
-cross_enc = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-4-v2", max_length=256)
+cross_enc = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-4-v2", max_length=256, device="cuda:0")
 stemmer = PorterStemmer()
 stop_words = set(stopwords.words('english'))
 
@@ -85,6 +85,7 @@ async def index():
         <script>
             function search() {
                 const desc = document.getElementById('desc').value;
+                document.getElementById('results').innerHTML = '<p>Loading results...</p>';
                 fetch('/best_submissions/?desc=' + encodeURIComponent(desc))
                 .then(response => response.json())
                 .then(data => {
@@ -115,43 +116,6 @@ async def index():
     '''
 
 
-@app.route('/search/')
-async def search_results():
-    desc = request.args.get('desc')
-    return """
-    <html>
-    <body>
-        <p>Loading results...</p>
-        <script>
-        fetch('/best_submissions/?desc=""" + urllib.parse.quote(desc) + """')
-        .then(response => response.json())
-        .then(data => {
-             const submissionsHTML = data.map(([id, {score, title, title_score, comments}]) => {
-                 const sortedComments = Object.entries(comments).sort(([,a], [,b]) => b.comment_score - a.comment_score).slice(0, 3);
-                 return `
-                     <li>
-                        <a href="https://news.ycombinator.com/item?id=${id}">${title}</a><br>
-                        <small><i>(Overall Score: ${score.toFixed(2)})</i></small>
-                        <small><i>(Title Score: ${title_score.toFixed(2)})</i></small><br>
-                        <ul>
-                        ${sortedComments.map(([comment_id, {comment_score, comment_text}]) => `
-                            <li>
-                            <a href="https://news.ycombinator.com/item?id=${comment_id}">${comment_text}</a>
-                            <small><i>(Comment Score: ${comment_score.toFixed(2)})</i></small>
-                            </li>
-                        `).join('')}
-                        </ul>
-                    </li>
-                `;
-             }).join('<hr/>');
-            document.body.innerHTML = `<ul>${submissionsHTML}</ul>`;
-            });
-        </script>
-    </body>
-    </html>
-    """
-
-
 @app.route('/best_submissions/')
 async def best_submissions():
     desc = request.args.get('desc')
@@ -160,4 +124,4 @@ async def best_submissions():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=8081)

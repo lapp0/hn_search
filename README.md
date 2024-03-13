@@ -7,7 +7,11 @@ Summary
 - Query HN Algolia
 - Apply CrossEncoder to (description, comments / titles) to get score
 
-Hosted at:
+```
+pip install aiohttp flask[async] transformers sentence-transformers nltk
+python -m nltk.downloader stopwords punkt
+python search.py
+```
 
 # Example Profile Description
 
